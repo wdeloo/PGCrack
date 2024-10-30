@@ -2,7 +2,7 @@
 
 PGCrack is a tool made in go to **bruteforce** symmetrically **encrypted** `GPG` files.
 
-PGCrack is currently in a **beta phase**, it only supports **random** passwords for the momment.
+⚠️ PGCrack is currently in a **beta phase**.
 
 ## Installation
 
@@ -30,9 +30,23 @@ The **compiled binary** will be in `dist` directory.
 
 ## Usage
 
-`./PGCrack [parameters] encrypted.gpg`
+```
+./pgcrack [mode] [parameters] encrypted.gpg
+```
+
+### Modes
+
+#### Wordlist
+`-w wordlist` Get the passwords from a wordlist
+
+*Example: `./pgcrack -w wordlist.txt [parameters] encrypted.gpg`*
+
+#### Random
+`-r` Use random passwords of a given length (`-l`)
+
+*Example: `./pgcrack -r -l <num> [parameters] encrypted.gpg`*
 
 ### Parameters
-`-l password-length` (**required**)
+`-t number-of-threads` (*default: 1*)
 
-`-t number-of-threads` (*optional*)
+`-l password-length` (**required for random mode**)
