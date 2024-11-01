@@ -15,6 +15,7 @@ import (
 var startTime time.Time = time.Now()
 var count int = 0
 var prevCount int = 0
+var foundPasswords []string
 
 func catchCtrlC() {
 	signals := make(chan os.Signal, 1)
@@ -22,7 +23,8 @@ func catchCtrlC() {
 
 	<-signals
 
-	fmt.Println("\n[x] Bruteforce interrupted")
+	fmt.Print("\n[x] Bruteforce interrupted\n\n")
+	printSummary()
 	fmt.Print("\033[?25h") // show cursor
 	os.Exit(1)
 }
@@ -33,12 +35,33 @@ func tryDecrypt(file string, password string) {
 
 	if err == nil {
 		fmt.Printf("\n[+] Password found: %s\n", password)
+		foundPasswords = append(foundPasswords, password)
 	}
 }
 
 func fileExists(fileName string) bool {
 	_, err := os.Stat(fileName)
 	return !os.IsNotExist(err)
+}
+
+func printSummary() {
+	fmt.Println("----------------------------------------------------------")
+
+	fmt.Printf("              TOTAL TIME: %d hours %d minutes %d seconds\n", int(time.Since(startTime).Abs().Hours()), int(time.Since(startTime).Abs().Minutes())%60, int(time.Since(startTime).Abs().Seconds())%60)
+	fmt.Printf("  TOTAL TESTED PASSWORDS: %d\n", count)
+	fmt.Printf("           AVERAGE SPEED: %s passwords/second\n", fmt.Sprintf("%.2f", (float64(count)/float64(time.Since(startTime).Abs().Milliseconds()))*1000))
+
+	fmt.Println("")
+
+	if len(foundPasswords) == 0 {
+		fmt.Println("      NO PASSWORDS FOUND")
+	} else {
+		for _, password := range foundPasswords {
+			fmt.Printf("          FOUND PASSWORD: \033[7m%s\033[0m\n", password)
+		}
+	}
+
+	fmt.Println("----------------------------------------------------------")
 }
 
 func printStatus() {
@@ -200,6 +223,7 @@ func main() {
 	}
 
 	printStatus()
-	fmt.Println("\n[x] Bruteforce concluded")
+	fmt.Print("\n[x] Bruteforce concluded\n\n")
+	printSummary()
 	fmt.Print("\033[?25h") // show cursor
 }
