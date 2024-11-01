@@ -34,7 +34,7 @@ func tryDecrypt(file string, password string) {
 	_, err := cmd.Output()
 
 	if err == nil {
-		fmt.Printf("\n[+] Password found: %s\n", password)
+		fmt.Printf("\n[+] Password found: \033[7m%s\033[0m\n", password)
 		foundPasswords = append(foundPasswords, password)
 	}
 }
