@@ -1,10 +1,10 @@
 package main
 
 import (
-	"bufio"
+	"PGCrack/src/modes/random"
+	"PGCrack/src/modes/wordlist"
 	"flag"
 	"fmt"
-	"math/rand/v2"
 	"os"
 	"os/exec"
 	"time"
@@ -13,8 +13,6 @@ import (
 var startTime time.Time = time.Now()
 var count int = 0
 var prevCount int = 0
-
-var finished bool
 
 func tryDecrypt(file string, password string) {
 	cmd := exec.Command("bash", "-c", "echo "+password+" | gpg --batch --passphrase-fd 0 --decrypt "+file)
@@ -30,51 +28,22 @@ func fileExists(fileName string) bool {
 	return !os.IsNotExist(err)
 }
 
-func statusBar() {
-	for {
-		fmt.Printf("UPTIME: %dh %dm %ds · TESTED PASSWORDS: %d · SPEED: %dp/s     \r",
-			int(time.Since(startTime).Abs().Hours()),
-			int(time.Since(startTime).Abs().Minutes())%60,
-			int(time.Since(startTime).Abs().Seconds())%60,
-			count,
-			count-prevCount)
+func printStatus() {
+	fmt.Printf("UPTIME: %dh %dm %ds · TESTED PASSWORDS: %d · SPEED: %dp/s     \r",
+		int(time.Since(startTime).Abs().Hours()),
+		int(time.Since(startTime).Abs().Minutes())%60,
+		int(time.Since(startTime).Abs().Seconds())%60,
+		count,
+		count-prevCount)
+}
 
+func statusBar() {
+	fmt.Print("\033[?25l") // hide cursor
+	for {
+		printStatus()
 		prevCount = count
 
-		if finished {
-			fmt.Println("\n[x] Bruteforce concluded")
-			return
-		}
-
 		time.Sleep(1 * time.Second)
-	}
-}
-
-func doRandomBruteForce(filePath string, chars []rune, length int) {
-	getRandomPassword := func(chars []rune, length int) string {
-		var password []rune
-		for i := 0; i < length; i++ {
-			randomCharacter := chars[rand.IntN(len(chars))]
-			password = append(password, randomCharacter)
-		}
-		return string(password)
-	}
-
-	for {
-		password := getRandomPassword(chars, length)
-		tryDecrypt(filePath, password)
-		count++
-	}
-}
-
-func doWordlistBruteForce(filePath string, scanner *bufio.Scanner) {
-	for scanner.Scan() {
-		password := scanner.Text()
-		tryDecrypt(filePath, password)
-		count++
-	}
-	if !scanner.Scan() {
-		finished = true
 	}
 }
 
@@ -149,12 +118,10 @@ func checkFlags(mode string, threads int, length int) {
 
 func main() {
 	threads := flag.Int("t", 1, "")
-
-	random := flag.Bool("r", false, "")
+	randomMode := flag.Bool("r", false, "")
+	wordlistMode := flag.String("w", "", "Specify password wordlist")
 	length := flag.Int("l", 0, "")
 	help := flag.Bool("help", false, "")
-
-	wordlist := flag.String("w", "", "Specify password wordlist")
 
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
@@ -185,8 +152,8 @@ func main() {
 	}
 
 	modes := map[string]any{
-		"random":   *random,
-		"wordlist": *wordlist,
+		"random":   *randomMode,
+		"wordlist": *wordlistMode,
 	}
 
 	mode := getMode(modes)
@@ -201,27 +168,23 @@ func main() {
 		'.', '-', '_', ',',
 	}
 
-	fmt.Print("\033[?25l")
+	go statusBar()
+
 	switch mode {
 	case "random":
-		for i := 0; i < *threads; i++ {
-			go doRandomBruteForce(filePath, chars, *length)
-		}
+		random.DoRandomBruteForce(filePath, chars, *length, tryDecrypt, &count, *threads)
 	case "wordlist":
-		file, err := os.Open(*wordlist)
+		file, err := os.Open(*wordlistMode)
 		if os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "%s: No such file or directory\n", *wordlist)
+			fmt.Fprintf(os.Stderr, "%s: No such file or directory\n", *wordlistMode)
 			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
 			os.Exit(1)
 		}
 
-		defer file.Close()
-
-		scanner := bufio.NewScanner(file)
-		for i := 0; i < *threads; i++ {
-			go doWordlistBruteForce(filePath, scanner)
-		}
+		wordlist.DoWordlistBruteForce(filePath, file, tryDecrypt, &count, *threads)
 	}
 
-	statusBar()
+	printStatus()
+	fmt.Println("\n[x] Bruteforce concluded")
+	fmt.Print("\033[?25h") // show cursor
 }
