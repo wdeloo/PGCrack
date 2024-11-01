@@ -7,12 +7,25 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"os/signal"
+	"syscall"
 	"time"
 )
 
 var startTime time.Time = time.Now()
 var count int = 0
 var prevCount int = 0
+
+func catchCtrlC() {
+	signals := make(chan os.Signal, 1)
+	signal.Notify(signals, syscall.SIGINT, syscall.SIGTERM)
+
+	<-signals
+
+	fmt.Println("\n[x] Bruteforce interrupted")
+	fmt.Print("\033[?25h") // show cursor
+	os.Exit(1)
+}
 
 func tryDecrypt(file string, password string) {
 	cmd := exec.Command("bash", "-c", "echo "+password+" | gpg --batch --passphrase-fd 0 --decrypt "+file)
@@ -117,6 +130,8 @@ func checkFlags(mode string, threads int, length int) {
 }
 
 func main() {
+	go catchCtrlC()
+
 	threads := flag.Int("t", 1, "")
 	randomMode := flag.Bool("r", false, "")
 	wordlistMode := flag.String("w", "", "Specify password wordlist")
