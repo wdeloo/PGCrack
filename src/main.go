@@ -28,7 +28,7 @@ func catchCtrlC() {
 }
 
 func tryDecrypt(file string, password string) {
-	cmd := exec.Command("bash", "-c", "echo "+password+" | gpg --batch --passphrase-fd 0 --decrypt "+file)
+	cmd := exec.Command("bash", "-c", "echo '"+password+"' | gpg --batch --passphrase-fd 0 --decrypt "+file)
 	_, err := cmd.Output()
 
 	if err == nil {
