@@ -1,6 +1,7 @@
 package main
 
 import (
+	"PGCrack/src/modes/incremental"
 	"PGCrack/src/modes/random"
 	"PGCrack/src/modes/wordlist"
 	"flag"
@@ -123,7 +124,7 @@ func getFileName(args []string) string {
 	return filePath
 }
 
-func checkFlags(mode string, threads int, length int) {
+func checkFlags(mode string, threads int, length int, minLength int, maxLength int) {
 	switch mode {
 	case "random":
 		if length < 1 {
@@ -131,9 +132,40 @@ func checkFlags(mode string, threads int, length int) {
 			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
 			os.Exit(1)
 		}
+		if minLength != 0 || maxLength != 0 {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"--min/max-length\": password min/max length can not be used in random mode, use length (-l) instead")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
 	case "wordlist":
 		if length != 0 {
 			fmt.Fprintln(os.Stderr, "Error in parameter \"-l\": cannot set length in wordlist mode")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
+		if minLength != 0 || maxLength != 0 {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"--min/max-length\": cannot set password min/max length in wordlist mode")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
+	case "incremental":
+		if length != 0 && (minLength != 0 || maxLength != 0) {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"-l, --min/max-length\": cannot set password length and min/max password length at the same time")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
+		if length < 0 {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"-l\": password length must be at least 1")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
+		if minLength < 0 || maxLength < 0 {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"--min/max-length\": password min/max length must be at least 1")
+			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
+			os.Exit(1)
+		}
+		if minLength > maxLength && maxLength != 0 {
+			fmt.Fprintln(os.Stderr, "Error in parameter \"--min/max-length\": min length cannot be greater than max length")
 			fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
 			os.Exit(1)
 		}
@@ -155,10 +187,13 @@ func checkFlags(mode string, threads int, length int) {
 func main() {
 	go catchCtrlC()
 
-	threads := flag.Int("t", 1, "")
 	randomMode := flag.Bool("r", false, "")
-	wordlistMode := flag.String("w", "", "Specify password wordlist")
+	wordlistMode := flag.String("w", "", "")
+	incrementalMode := flag.Bool("i", false, "")
+	threads := flag.Int("t", 1, "")
 	length := flag.Int("l", 0, "")
+	minLength := flag.Int("min-length", 0, "")
+	maxLength := flag.Int("max-length", 0, "")
 	help := flag.Bool("help", false, "")
 
 	flag.Usage = func() {
@@ -190,14 +225,15 @@ func main() {
 	}
 
 	modes := map[string]any{
-		"random":   *randomMode,
-		"wordlist": *wordlistMode,
+		"random":      *randomMode,
+		"wordlist":    *wordlistMode,
+		"incremental": *incrementalMode,
 	}
 
 	mode := getMode(modes)
 
 	filePath := getFileName(flag.Args())
-	checkFlags(mode, *threads, *length)
+	checkFlags(mode, *threads, *length, *minLength, *maxLength)
 
 	chars := []rune{
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
@@ -211,6 +247,7 @@ func main() {
 	switch mode {
 	case "random":
 		random.DoRandomBruteForce(filePath, chars, *length, tryDecrypt, &count, *threads)
+
 	case "wordlist":
 		file, err := os.Open(*wordlistMode)
 		if os.IsNotExist(err) {
@@ -220,6 +257,15 @@ func main() {
 		}
 
 		wordlist.DoWordlistBruteForce(filePath, file, tryDecrypt, &count, *threads)
+
+	case "incremental":
+		if *length != 0 {
+			*minLength = *length
+			*maxLength = *length
+		}
+
+		incremental.DoIncrementalBruteForce(filePath, chars, *minLength, *maxLength, &count, *threads, tryDecrypt)
+
 	}
 
 	printStatus()
