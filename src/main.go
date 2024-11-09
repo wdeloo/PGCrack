@@ -101,8 +101,6 @@ func getMode(modes map[string]any) string {
 }
 
 func getFileName(args []string) string {
-	filePath := args[0]
-
 	if len(flag.Args()) == 0 {
 		fmt.Fprintln(os.Stderr, "Missing argument: encrypted \".gpg\" file")
 		fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
@@ -114,6 +112,8 @@ func getFileName(args []string) string {
 		fmt.Fprintf(os.Stderr, "\nExecute: %s --help to print usage\n", os.Args[0])
 		os.Exit(1)
 	}
+
+	filePath := args[0]
 
 	if !fileExists(filePath) {
 		fmt.Fprintf(os.Stderr, "%s: No such file or directory\n", filePath)
@@ -273,3 +273,6 @@ func main() {
 	printSummary()
 	fmt.Print("\033[?25h") // show cursor
 }
+
+// quitar lo del ctrl c y lo del bug de getFileName
+// descomentar el resumen
