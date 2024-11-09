@@ -126,7 +126,7 @@ func getFileName(args []string) string {
 	return filePath
 }
 
-func checkFlags(mode string, threads int, length int, minLength int, maxLength int) {
+func checkFlags(mode string, threads int, length int, minLength int, maxLength int, characters string) {
 	switch mode {
 	case "random":
 		if length < 1 {
@@ -141,6 +141,9 @@ func checkFlags(mode string, threads int, length int, minLength int, maxLength i
 		}
 		if minLength != 0 || maxLength != 0 {
 			exitWithError("error in parameter \"--min/max-length\": cannot set password min/max length in wordlist mode")
+		}
+		if characters != "" {
+			exitWithError("error in parameter \"-c\": cannot set charset in wordlist mode")
 		}
 	case "incremental":
 		if length != 0 && (minLength != 0 || maxLength != 0) {
@@ -173,6 +176,7 @@ func main() {
 	wordlistMode := flag.String("w", "", "")
 	incrementalMode := flag.Bool("i", false, "")
 	threads := flag.Int("t", 1, "")
+	charset := flag.String("c", "", "")
 	length := flag.Int("l", 0, "")
 	minLength := flag.Int("min-length", 0, "")
 	maxLength := flag.Int("max-length", 0, "")
@@ -220,13 +224,13 @@ func main() {
 	mode := getMode(modes)
 
 	filePath := getFileName(flag.Args())
-	checkFlags(mode, *threads, *length, *minLength, *maxLength)
+	checkFlags(mode, *threads, *length, *minLength, *maxLength, *charset)
 
-	chars := []rune{
-		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-		'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
-		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-		'.', '-', '_', ',',
+	var chars []rune
+	if *charset == "" {
+		chars = []rune("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789")
+	} else {
+		chars = []rune(*charset)
 	}
 
 	go statusBar()
@@ -244,6 +248,12 @@ func main() {
 		wordlist.DoWordlistBruteForce(filePath, file, tryDecrypt, &count, *threads)
 
 	case "incremental":
+		chars := []rune{
+			'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+			'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+			'0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
+			'.', '-', '_',
+		}
 		if *length != 0 {
 			*minLength = *length
 			*maxLength = *length
