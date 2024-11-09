@@ -24,6 +24,8 @@ func catchCtrlC() {
 
 	<-signals
 
+	fmt.Print("\r")
+	printStatus()
 	fmt.Print("\n[x] Bruteforce interrupted\n\n")
 	printSummary()
 	fmt.Print("\033[?25h") // show cursor
@@ -273,6 +275,3 @@ func main() {
 	printSummary()
 	fmt.Print("\033[?25h") // show cursor
 }
-
-// quitar lo del ctrl c y lo del bug de getFileName
-// descomentar el resumen
