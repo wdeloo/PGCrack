@@ -190,7 +190,7 @@ func main() {
 		fmt.Printf("Usage: %s [mode] [parameters] encrypted.gpg\n", os.Args[0])
 		fmt.Println("")
 		fmt.Println("# Modes")
-		fmt.Println("  -w <file>           Wordlist: Bruteforce using a wordlist")
+		fmt.Println("  -w <file>           Wordlist: Get the passwords from a wordlist")
 		fmt.Printf("     Usage: %s -w wordlist.txt [parameters] encrypted.gpg\n", os.Args[0])
 		fmt.Println("")
 		fmt.Println("  -i                  Incremental: Bruteforce using all possible combinations")
