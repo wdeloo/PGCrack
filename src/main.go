@@ -13,10 +13,18 @@ import (
 	"time"
 )
 
+var paramHelpErrorMessage = fmt.Sprintf("\nexecute [ %s --help ] to print usage", os.Args[0])
+
 var startTime time.Time = time.Now()
 var count int = 0
 var prevCount int = 0
 var foundPasswords []string
+
+func exitWithError(errorMessage string) {
+	fmt.Fprintln(os.Stderr, errorMessage)
+	fmt.Fprintln(os.Stderr, paramHelpErrorMessage)
+	os.Exit(1)
+}
 
 func catchCtrlC() {
 	signals := make(chan os.Signal, 1)
@@ -93,9 +101,7 @@ func getMode(modes map[string]any) string {
 			if mode == "" {
 				mode = k
 			} else {
-				fmt.Fprintln(os.Stderr, "only one mode can be specified")
-				fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-				os.Exit(1)
+				exitWithError("only one mode can be specified")
 			}
 		}
 	}
@@ -104,23 +110,17 @@ func getMode(modes map[string]any) string {
 
 func getFileName(args []string) string {
 	if len(flag.Args()) == 0 {
-		fmt.Fprintln(os.Stderr, "missing argument: encrypted \".gpg\" file")
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-		os.Exit(1)
+		exitWithError("missing argument: encrypted \".gpg\" file")
 	}
 
 	if len(flag.Args()) > 1 {
-		fmt.Fprintln(os.Stderr, "too many arguments")
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-		os.Exit(1)
+		exitWithError("too many arguments")
 	}
 
 	filePath := args[0]
 
 	if !fileExists(filePath) {
-		fmt.Fprintf(os.Stderr, "%s: no such file or directory\n", filePath)
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-		os.Exit(1)
+		exitWithError(fmt.Sprintf("%s: no such file or directory\n", filePath))
 	}
 
 	return filePath
@@ -130,59 +130,39 @@ func checkFlags(mode string, threads int, length int, minLength int, maxLength i
 	switch mode {
 	case "random":
 		if length < 1 {
-			fmt.Fprintln(os.Stderr, "missing or error in parameter \"-l\": password length is required and must be at least 1")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("missing or error in parameter \"-l\": password length is required for random mode and must be at least 1")
 		}
 		if minLength != 0 || maxLength != 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"--min/max-length\": password min/max length can not be used in random mode, use length (-l) instead")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"--min/max-length\": password min/max length can not be used in random mode, use length (-l) instead")
 		}
 	case "wordlist":
 		if length != 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"-l\": cannot set length in wordlist mode")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"-l\": cannot set length in wordlist mode")
 		}
 		if minLength != 0 || maxLength != 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"--min/max-length\": cannot set password min/max length in wordlist mode")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"--min/max-length\": cannot set password min/max length in wordlist mode")
 		}
 	case "incremental":
 		if length != 0 && (minLength != 0 || maxLength != 0) {
-			fmt.Fprintln(os.Stderr, "error in parameter \"-l, --min/max-length\": cannot set password length and min/max password length at the same time")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"-l, --min/max-length\": cannot set password length and password min/max length at the same time")
 		}
 		if length < 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"-l\": password length must be at least 1")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"-l\": password length must be at least 1")
 		}
 		if minLength < 0 || maxLength < 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"--min/max-length\": password min/max length must be at least 1")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"--min/max-length\": password min/max length must be at least 1")
 		}
 		if minLength > maxLength && maxLength != 0 {
-			fmt.Fprintln(os.Stderr, "error in parameter \"--min/max-length\": min length cannot be greater than max length")
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError("error in parameter \"--min/max-length\": min length cannot be greater than max length")
 		}
 	}
 
 	if mode == "" {
-		fmt.Fprintln(os.Stderr, "no mode specified")
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-		os.Exit(1)
+		exitWithError("error: no mode specified")
 	}
 
 	if threads < 1 {
-		fmt.Fprintln(os.Stderr, "error in parameter \"-t\": number of threads must be at least 1")
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-		os.Exit(1)
+		exitWithError("error in parameter \"-t\": number of threads must be at least 1")
 	}
 }
 
@@ -199,7 +179,7 @@ func main() {
 	help := flag.Bool("help", false, "")
 
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
+		fmt.Fprintln(os.Stderr, paramHelpErrorMessage)
 	}
 
 	showHelp := func() {
@@ -253,9 +233,7 @@ func main() {
 	case "wordlist":
 		file, err := os.Open(*wordlistMode)
 		if os.IsNotExist(err) {
-			fmt.Fprintf(os.Stderr, "%s: no such file or directory\n", *wordlistMode)
-			fmt.Fprintf(os.Stderr, "\nexecute [ %s --help ] to print usage\n", os.Args[0])
-			os.Exit(1)
+			exitWithError(fmt.Sprintf("%s: no such file or directory\n", *wordlistMode))
 		}
 
 		wordlist.DoWordlistBruteForce(filePath, file, tryDecrypt, &count, *threads)
