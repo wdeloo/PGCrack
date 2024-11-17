@@ -7,10 +7,11 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"os/exec"
 	"os/signal"
 	"syscall"
 	"time"
+
+	"github.com/ProtonMail/gopenpgp/v3/crypto"
 )
 
 var paramHelpErrorMessage = fmt.Sprintf("\nexecute [ %s --help ] to print usage", os.Args[0])
@@ -41,8 +42,12 @@ func catchCtrlC() {
 }
 
 func tryDecrypt(file string, password string) {
-	cmd := exec.Command("bash", "-c", "echo '"+password+"' | gpg --batch --passphrase-fd 0 --decrypt "+file)
-	_, err := cmd.Output()
+	encFile, _ := os.ReadFile(file)
+
+	pgp := crypto.PGP()
+
+	decHandle, _ := pgp.Decryption().Password([]byte(password)).New()
+	_, err := decHandle.Decrypt(encFile, crypto.Bytes)
 
 	if err == nil {
 		fmt.Printf("\n[+] Password found: \033[7m%s\033[0m\n", password)
