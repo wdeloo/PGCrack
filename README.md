@@ -2,8 +2,6 @@
 
 PGCrack is a tool made in go to **bruteforce** symmetrically **encrypted** `GPG` files.
 
-⚠️ PGCrack is currently in a **beta phase**.
-
 # Installation
 
 ## Download PGCrack Binary
